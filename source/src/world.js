@@ -199,135 +199,99 @@ function makeWorld(D, T, flyPts, POSES) {
     }
   }
 
-  // --- 2. Hanging Power Cables, Conduits & Laser Barrier Strands (using W_LEAF ribbons)
+  // --- 2. Taut Overhead Power Conduits & Laser Barrier Strands (using W_LEAF ribbons)
   const cableCluster = (x, y, z, H, kind) => {
-    const strands = 2 + (rnd() * 3 | 0), ph = rnd() * TAU, sr = rr(0.25, 0.7);
+    const strands = 2, ph = rnd() * TAU, sr = rr(0.2, 0.45);
     for (let s = 0; s < strands; s++) {
       const a = ph + s * TAU / strands, rx = x + cos(a) * sr, rz = z + sin(a) * sr;
-      for (let h = 0; h < H - 1; h += 1.8) {
-        leaf(big, rx, y + h, rz, 2.2, a + PI / 2, 0.06, kind === 1 ? 0.14 : 0.19, h, kind === 1 ? 5 : 1, rnd(), rnd(), 0.18);
+      for (let h = 0; h < H - 1; h += 2.2) {
+        leaf(big, rx, y + h, rz, 2.4, a + PI / 2, 0.02, kind === 1 ? 0.12 : 0.16, h, kind === 1 ? 5 : 1, rnd(), rnd(), 0.02);
       }
-      // Glowing energy nodes / sparks along conduits
-      for (let h = 1; h < H - 1; h += 3.2) {
-        glint(rx, y + h, rz, h, rnd(), kind === 1 ? 0.85 : 0.15, rr(0.03, 0.065), 0);
+      for (let h = 1; h < H - 1; h += 4.5) {
+        glint(rx, y + h, rz, h, rnd(), kind === 1 ? 0.85 : 0.15, rr(0.03, 0.06), 0);
       }
     }
   };
   rseed(2);
-  for (let i = 0; i < 6500; i++) {
-    const a = rnd() * TAU, r = sqrt(rnd()) * 125, x = cos(a) * r, z = sin(a) * r;
-    if (hypot(x, z) < 12) continue; // keep Reactor core center clear
+  for (let i = 0; i < 1200; i++) {
+    const a = rnd() * TAU, r = sqrt(rnd()) * 120, x = cos(a) * r, z = sin(a) * r;
+    if (hypot(x, z) < 14) continue;
     const f = floorsAt(x, z);
     for (let j = 0; j < f.length; j += 2) {
       const fy = f[j], fh = f[j + 1];
-      if (fh > 8 && fh < 34 && !nearFly(x, fy + fh * 0.5, z, 6.5) && rnd() < 0.08) {
+      if (fh > 10 && fh < 34 && !nearFly(x, fy + fh * 0.5, z, 7.0) && rnd() < 0.05) {
         cableCluster(x, fy, z, fh, zoneP(x, z) > 0.35 || rnd() < 0.3 ? 1 : 0);
         break;
       }
     }
   }
 
-  // Hanging ceiling cables & warning strips in tunnels and chambers
+  // Sparse ceiling power conduits in large chambers
   rseed(3);
-  for (let i = 0; i < 28000; i++) {
+  for (let i = 0; i < 4000; i++) {
     const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2], ny = T.wn[k + 1];
-    if (hypot(x, z) > 135 || nearFly(x, y, z, 4.5)) continue;
-    const zp = zoneP(x, z), u = rnd();
-    if (ny < -0.55 && u < 0.16) { // ceiling hanging conduits & optical fibers
-      const n = 4 + (rnd() * 6 | 0);
-      for (let j = 0; j < n; j++) {
-        leaf(big, x + rr(-0.7, 0.7), y + 0.15, z + rr(-0.7, 0.7), rr(1.2, 4.5), rnd() * TAU, PI - rr(0.02, 0.25), rr(0.06, 0.13), 0, zp > 0.3 || rnd() < 0.4 ? 5 : 4, rnd(), rnd(), rr(0.15, 0.4));
+    if (hypot(x, z) > 135 || nearFly(x, y, z, 5.5)) continue;
+    const zp = zoneP(x, z);
+    if (ny < -0.75 && rnd() < 0.08) {
+      for (let j = 0; j < 2; j++) {
+        leaf(big, x + rr(-0.4, 0.4), y + 0.1, z + rr(-0.4, 0.4), rr(1.2, 3.2), rnd() * TAU, PI - 0.04, rr(0.06, 0.10), 0, zp > 0.3 || rnd() < 0.4 ? 5 : 4, rnd(), rnd(), 0.04);
       }
-      if (rnd() < 0.45) glint(x, y - rr(0.4, 1.8), z, 0, rnd(), zp > 0.3 ? 0.65 : 0.1, rr(0.035, 0.07), 0);
-    } else if (abs(ny) < 0.35 && u < 0.04) { // wall cable brackets
-      const yaw = atan2(T.wn[k + 2], T.wn[k]), n = 3 + (rnd() * 4 | 0);
-      for (let j = 0; j < n; j++) {
-        leaf(big, x, y, z, rr(0.6, 1.6), yaw + rr(-0.5, 0.5), rr(0.2, 0.8), rr(0.06, 0.11), 0.2, 3, rnd(), rnd(), rr(0.15, 0.4));
-      }
+      if (rnd() < 0.35) glint(x, y - rr(0.4, 1.4), z, 0, rnd(), zp > 0.3 ? 0.65 : 0.1, rr(0.03, 0.06), 0);
     }
   }
 
-  // --- 3. Energy Center & Recharge Station Spark Fields (glints + small glowing tufts)
+  // --- 3. Energy Center & Recharge Station Spark Fields (glints only, no seabed grass tufts)
   rseed(4);
-  for (const p of MAGENTA) for (let i = p[2] * p[2] * 18 | 0; i > 0; i--) {
+  for (const p of MAGENTA) for (let i = p[2] * p[2] * 3 | 0; i > 0; i--) {
     const a = rnd() * TAU, r = sqrt(rnd()) * p[2], x = p[0] + cos(a) * r, z = p[1] + sin(a) * r;
     const f = floorsAt(x, z); if (!f.length) continue;
     const y = f[f.length - 2], fh = f[f.length - 1];
-    if (grad(x, y, z)[1] < 0.55) continue;
+    if (grad(x, y, z)[1] < 0.65) continue;
     const isEnergy = hypot(x - 6, z - 84) < 28 || hypot(x + 62, z + 8) < 22 || hypot(x, z) < 20;
-    if (rnd() < 0.45) {
-      for (let j = 0; j < 2; j++) leaf(small, x + rr(-0.2, 0.2), y - 0.02, z + rr(-0.2, 0.2), rr(0.15, 0.45), rnd() * TAU, rr(0.05, 0.35), rr(0.04, 0.08), 0, isEnergy ? 7 : 5, rnd(), rnd(), 0.2);
-    }
-    if (rnd() < (isEnergy ? 0.65 : 0.25)) {
-      glint(x, y + rr(0.2, min(fh - 0.5, 8.0)), z, 0, rnd(), isEnergy ? rr(0.55, 0.85) : rr(0.0, 0.28), rr(0.025, 0.06), 0);
+    if (rnd() < (isEnergy ? 0.55 : 0.18)) {
+      glint(x, y + rr(0.2, min(fh - 0.5, 8.0)), z, 0, rnd(), isEnergy ? rr(0.55, 0.85) : rr(0.0, 0.28), rr(0.025, 0.055), 0);
     }
   }
 
-  // --- 4. Industrial Props on Walls, Floors & Ceilings (Turrets, Pipe Clusters, Supply Cylinders, Crystals)
+  // --- 4. Purposeful Architectural Descent Props (~350 ceiling turrets, floor crates, transformers & pipe manifolds)
   const spots = [];
   rseed(6);
-  for (let i = 0; i < 14000; i++) {
+  for (let i = 0; i < 6500; i++) {
     const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2];
-    if (hypot(x, z) > 135 || nearFly(x, y, z, 3.8)) continue;
-    const n0 = [T.wn[k], T.wn[k + 1], T.wn[k + 2]], [t1, t2] = tangent(n0);
-    const isTurret = abs(n0[1]) > 0.65 && rnd() < 0.35;
-    const cnt = isTurret ? 1 + (rnd() * 3 | 0) : 2 + (rnd() * 5 | 0), sd = rnd();
-    if (rnd() > 0.35) continue;
-    for (let j = 0; j < cnt; j++) {
-      const a = rr(-1, 1) * (0.6 + cnt * 0.15), b = rr(-1, 1) * (0.6 + cnt * 0.15);
-      const s = snap(x + t1[0] * a + t2[0] * b, y + t1[1] * a + t2[1] * b, z + t1[2] * a + t2[2] * b, n0);
-      if (!s) continue;
-      let ux = s[3], uy = s[4], uz = s[5]; const l = hypot(ux, uy, uz) || 1; ux /= l; uy /= l; uz /= l;
-      const q = qMul(qFromY(ux, uy, uz), qAxis(0, 1, 0, (rnd() * 4 | 0) * PI / 2));
-      const sc = isTurret ? rr(0.55, 1.35) : rr(0.45, 1.15);
-      const meshId = isTurret ? 7 + (rnd() * 3 | 0) : 4 + (rnd() * 3 | 0);
-      solid(meshId, s[0] - ux * 0.1 * sc, s[1] - uy * 0.1 * sc, s[2] - uz * 0.1 * sc, sc, q, isTurret ? 5 : 4, fract(sd + rr(-0.04, 0.04)), 1, 0);
-    }
-    if (n0[1] > 0.5 && rnd() < 0.35) spots.push([x + n0[0] * 0.5, y + n0[1] * 0.5, z + n0[2] * 0.5]);
+    if (hypot(x, z) > 130 || nearFly(x, y, z, 4.5)) continue;
+    const n0 = [T.wn[k], T.wn[k + 1], T.wn[k + 2]];
+    const isCeil = n0[1] < -0.78 && rnd() < 0.08;
+    const isFloor = n0[1] > 0.82 && rnd() < 0.12;
+    if (!isCeil && !isFloor) continue;
+    const s = snap(x, y, z, n0);
+    if (!s) continue;
+    let ux = s[3], uy = s[4], uz = s[5]; const l = hypot(ux, uy, uz) || 1; ux /= l; uy /= l; uz /= l;
+    const q = qMul(qFromY(ux, uy, uz), qAxis(0, 1, 0, (rnd() * 4 | 0) * PI / 2));
+    const sc = isCeil ? rr(0.75, 1.25) : rr(0.65, 1.15);
+    const meshId = isCeil ? (rnd() < 0.7 ? 8 : 7) : (rnd() < 0.22 ? 9 : 4 + (rnd() * 3 | 0));
+    solid(meshId, s[0] - ux * 0.08 * sc, s[1] - uy * 0.08 * sc, s[2] - uz * 0.08 * sc, sc, q, isCeil ? 5 : 4, rnd(), 1, 0);
+    if (isFloor && rnd() < 0.25) spots.push([x + n0[0] * 0.5, y + n0[1] * 0.5, z + n0[2] * 0.5]);
   }
 
-  // Dense industrial machinery / pipe / energy crystal clusters in key bays
-  rseed(7);
-  for (const g of [[-62, -8, 18, 220], [64, 12, 20, 220], [6, 84, 22, 240], [0, 0, 24, 220], [0, -88, 20, 200], [-44, -64, 12, 120], [44, -62, 12, 120], [-40, 46, 12, 120], [42, 54, 12, 120]]) {
-    let made = 0;
-    for (let i = 0; i < 300000 && made < g[3]; i++) {
-      const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2];
-      if (hypot(x - g[0], z - g[1]) > g[2] || nearFly(x, y, z, 3.2)) continue;
-      made++;
-      const nx = T.wn[k], ny = T.wn[k + 1], nz = T.wn[k + 2], l = hypot(nx, ny, nz) || 1;
-      const isTech = abs(ny) < 0.7 || rnd() < 0.45;
-      const sc = isTech ? rr(0.6, 1.5) : rr(0.45, 1.1);
-      solid(isTech ? 7 + (rnd() * 3 | 0) : 4 + (rnd() * 3 | 0), x - nx / l * 0.1 * sc, y - ny / l * 0.1 * sc, z - nz / l * 0.1 * sc, sc, qMul(qFromY(nx / l, ny / l, nz / l), qAxis(0, 1, 0, (rnd() * 8 | 0) * PI / 4)), isTech ? 5 : 4, rnd(), 1, 0);
-    }
-  }
-
-  // --- 5. Floating Asteroid Ore & Defense Pods + Blasted Rock Rubble
+  // --- 5. Sparse Floating Asteroid Ore Pods & Deep Cavern Floor Boulders
   const BOULD = [
-    [0, -24, -88, 18, 9], [64, -28, 12, 20, 10], [-62, -24, -8, 14, 8],
-    [6, -22, 84, 16, 9], [-44, -32, -64, 12, 6], [44, -28, -62, 12, 6],
+    [0, -24, -88, 6, 9], [64, -28, 12, 8, 10], [-62, -24, -8, 5, 8],
+    [6, -22, 84, 6, 9],
   ];
   rseed(8);
   for (const b of BOULD) for (let i = 0; i < b[3]; i++) {
-    const sc = rnd() < 0.2 ? rr(1.2, 2.2) : rr(0.35, 1.1);
-    const x = b[0] + rr(-1, 1) * b[4], y = b[1] + rr(-1, 1) * b[4] * 0.6, z = b[2] + rr(-1, 1) * b[4];
-    if (Dw(x, y, z) > -sc - 1.2 || nearFly(x, y, z, 4.5)) continue;
-    const bob = rr(0.15, 0.45), sd = rnd();
-    solid(rnd() * 4 | 0, x, y, z, sc, qRand(), 1, sd, 1, bob);
+    const sc = rr(0.45, 1.35);
+    const x = b[0] + rr(-1, 1) * b[4], y = b[1] + rr(-1, 1) * b[4] * 0.5, z = b[2] + rr(-1, 1) * b[4];
+    if (Dw(x, y, z) > -sc - 1.5 || nearFly(x, y, z, 5.0)) continue;
+    solid(rnd() * 4 | 0, x, y, z, sc, qRand(), 1, rnd(), 1, rr(0.1, 0.3));
   }
 
   rseed(10);
-  for (let i = 0; i < 45000; i++) {
+  for (let i = 0; i < 4500; i++) {
     const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2], ny = T.wn[k + 1];
-    if (hypot(x, z) > 140 || (ny > 0.75 && rnd() < 0.7) || nearFly(x, y, z, 3.8)) continue;
-    const sc = (0.3 + 1.6 * pow(rnd(), 2.6)) * (ny > 0.75 ? 0.45 : 0.85), q = qRand();
-    chunks[(sc > 1.05 ? 3 : 0) + (rnd() * 3 | 0)][cellOf(x, z)].push(x - T.wn[k] * sc * 0.35, y - ny * sc * 0.35, z - T.wn[k + 2] * sc * 0.35, sc, q[0], q[1], q[2], q[3], 1, rnd(), sc > 1.05 ? 0 : 96, 0);
-  }
-  rseed(11);
-  for (let i = 0; i < 110000; i++) { // blasted rock & metal debris on floor
-    const k = pickV(), x = T.wp[k] + rr(-0.35, 0.35), z = T.wp[k + 2] + rr(-0.35, 0.35), y = T.wp[k + 1];
-    if (T.wn[k + 1] < 0.75 || hypot(x, z) > 135 || nearFly(x, y, z, 1.5)) continue;
-    const sc = 0.05 + 0.24 * pow(rnd(), 2), q = qRand();
-    nth++ % THIN || chunks[6][cellOf(x, z)].push(x, y - sc * 0.2, z, sc, q[0], q[1], q[2], q[3], 1, rnd(), 44, 0);
+    if (hypot(x, z) > 135 || ny < 0.65 || nearFly(x, y, z, 4.5)) continue;
+    const sc = 0.35 + 0.9 * pow(rnd(), 2.2), q = qRand();
+    chunks[(sc > 0.85 ? 3 : 0) + (rnd() * 3 | 0)][cellOf(x, z)].push(x - T.wn[k] * sc * 0.3, y - ny * sc * 0.3, z - T.wn[k + 2] * sc * 0.3, sc, q[0], q[1], q[2], q[3], 1, rnd(), sc > 0.85 ? 0 : 96, 0);
   }
 
   // --- 6. Major Set Pieces: The Central Reactor Core & Magma Foundry Extractor Rig
@@ -475,16 +439,32 @@ function meshChunk(sd, sub = 2, det = sub > 2) {
   });
 }
 
-// Industrial fuel cells, pressure tanks & armored canisters (octagonal/faceted lathe)
-function meshLathe(prof, seg, lump, ribs = 0) {
-  const m = new Mesh(), rings = [];
-  const sN = min(seg, 8); // keep crisp octagonal Descent industrial facets
-  for (const [r, h, ao] of prof) { const ring = []; for (let s = 0; s < sN; s++) { const a = (s + 0.5) / sN * TAU, rl = r * (1 + 0.04 * cos(ribs * a)); ring.push(m.v(cos(a) * rl, h, sin(a) * rl, ao)); } rings.push(ring); }
-  for (let k = 0; k < rings.length - 1; k++) for (let s = 0; s < sN; s++) { const s2 = (s + 1) % sN; m.quad(rings[k][s], rings[k + 1][s], rings[k + 1][s2], rings[k][s2]); }
+// Hard-edged Descent industrial props via Mesh.sweep:
+// 0: Armored Supply Crate Stack, 1: Louvered Wall/Floor Transformer, 2: Octagonal Shield/Energy Emitter Pad
+function meshLathe(kind) {
+  const m = new Mesh();
+  if (kind === 0) {
+    // Stacked armored munitions crates with corner bumpers
+    m.sweep([[0, 0, 0], [0, 0.65, 0]], 0.85, 0.85, () => [0, 0, 1]);
+    m.sweep([[0.12, 0.65, -0.08], [0.12, 1.15, -0.08]], 0.52, 0.52, () => [0, 0, 1]);
+    m.sweep([[-0.35, 0, 0], [-0.35, 0.7, 0]], 0.14, 0.92, () => [0, 0, 1]);
+    m.sweep([[0.35, 0, 0], [0.35, 0.7, 0]], 0.14, 0.92, () => [0, 0, 1]);
+  } else if (kind === 1) {
+    // Tall louvered industrial transformer cabinet with dual cooling fins
+    m.sweep([[0, 0, 0], [0, 1.4, 0]], 0.68, 0.48, () => [0, 0, 1]);
+    for (const sx of [-0.38, 0.38]) m.sweep([[sx, 0.15, 0], [sx, 1.25, 0]], 0.12, 0.36, () => [0, 0, 1]);
+    m.sweep([[0, 1.4, 0], [0, 1.56, 0]], 0.5, 0.34, () => [0, 0, 1]);
+  } else {
+    // Low-profile octagonal shield/energy emitter pad
+    const ring = [];
+    for (let i = 0; i <= 8; i++) { const a = i / 8 * TAU; ring.push([cos(a) * 0.58, 0.14, sin(a) * 0.58]); }
+    m.sweep(ring, 0.22, 0.28, () => [0, 1, 0], false);
+    m.sweep([[0, 0, 0], [0, 0.42, 0]], 0.38, 0.38, () => [0, 0, 1]);
+  }
   return m;
 }
 
-// Angular defense turrets, antenna arrays & crystalline ore formations
+// Angular defense turrets & high-voltage capacitor pylons
 function meshCoral(fan, lo = LV > 1) {
   rseed(200 + fan);
   const m = new Mesh();
@@ -497,9 +477,9 @@ function meshCoral(fan, lo = LV > 1) {
     }
   } else {
     // High-voltage Transformer / Quartz Crystal Cluster
-    const n0 = lo ? 3 : 5;
+    const n0 = lo ? 3 : 4;
     for (let i = 0; i < n0; i++) {
-      const a = i / n0 * TAU + rr(-0.2, 0.2), tilt = rr(0.15, 0.55), H = rr(0.55, 1.15), w = rr(0.12, 0.22);
+      const a = i / n0 * TAU + rr(-0.15, 0.15), tilt = rr(0.12, 0.42), H = rr(0.55, 1.05), w = rr(0.14, 0.22);
       const dx = cos(a) * sin(tilt), dy = cos(tilt), dz = sin(a) * sin(tilt);
       m.sweep([[0, 0, 0], [dx * H * 0.7, dy * H * 0.7, dz * H * 0.7], [dx * H, dy * H, dz * H]], (k) => k === 2 ? 0.02 : w, (k) => k === 2 ? 0.02 : w, () => [0, 1, 0]);
     }
@@ -507,14 +487,12 @@ function meshCoral(fan, lo = LV > 1) {
   return m;
 }
 
-// Industrial pipe manifold & exhaust vents
+// Right-angle industrial pipe manifold with flanged collars
 function meshTubes() {
-  rseed(210);
   const m = new Mesh();
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * TAU, r0 = 0.22, h = rr(0.65, 1.25), rad = rr(0.08, 0.13);
-    const pts = [[cos(a) * r0, 0, sin(a) * r0], [cos(a) * r0, h * 0.6, sin(a) * r0], [cos(a) * (r0 + 0.18), h, sin(a) * (r0 + 0.18)]];
-    m.tube(pts, () => rad, 6, true, (k) => 0.4 + 0.3 * k);
+  for (const [ox, oz, h, dx, dz] of [[-0.28, -0.15, 0.95, 0.45, 0], [0.22, -0.15, 0.65, 0, 0.45], [-0.05, 0.24, 1.15, -0.35, 0.2]]) {
+    m.sweep([[ox, 0, oz], [ox, h, oz], [ox + dx, h, oz + dz]], 0.16, 0.16, () => [0, 0, 1]);
+    m.sweep([[ox, h * 0.5, oz], [ox, h * 0.5 + 0.1, oz]], 0.24, 0.24, () => [0, 0, 1]);
   }
   return m;
 }

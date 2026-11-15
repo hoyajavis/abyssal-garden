@@ -279,9 +279,7 @@ await say('Arming defense systems…', 0.94, 1000);
 // 10 octagonal bulkhead frame, 11 reactor core, 12 heavy hulk mech, 13 patrol drone,
 // 14-20 rock chunks + debris, 21-22 turret LOD, 23-25 far LOD of large rock chunks
 const meshes = [meshChunk(1, 3), meshChunk(7, 3), meshChunk(13, 3), meshChunk(22, 3),
-  meshLathe([[0, 0, 0.5], [0.38, 0, 0.6], [0.46, 0.15, 0.85], [0.46, 0.95, 1], [0.38, 1.1, 0.9], [0, 1.12, 0.7]], 8, 0.1, 4),
-  meshLathe([[0, 0, 0.5], [0.28, 0, 0.6], [0.34, 0.4, 0.85], [0.34, 1.35, 1], [0.26, 1.48, 0.9], [0, 1.5, 0.7]], 8, 0.1, 4),
-  meshLathe([[0, 0, 0.5], [0.55, 0, 0.7], [0.65, 0.2, 1], [0.65, 0.45, 1], [0.52, 0.55, 0.9], [0, 0.56, 0.7]], 8, 0.1, 8),
+  meshLathe(0), meshLathe(1), meshLathe(2),
   meshCoral(0), meshCoral(1), meshTubes()].map((m) => m.build());
 meshes.push(meshFluke(), meshShip().build(), meshManta().build(), meshFish().build(),
   meshChunk(3).build(), meshChunk(11).build(), meshChunk(29).build(), meshChunk(5, 3).build(), meshChunk(17, 3).build(), meshChunk(41, 3).build(), meshChunk(9, 1).build(), meshCoral(0, 1).build(), meshCoral(1, 1).build(), meshChunk(5, 2, 1).build(), meshChunk(17, 2, 1).build(), meshChunk(41, 2, 1).build());
@@ -383,7 +381,7 @@ if (hasTS) {
 // ---------------------------------------------------------------- frame
 let hud = false;
 let kf = 0, kb = 0, kl = 0, kr = 0, ku = 0, kd = 0, krl = 0, krr = 0, ks = 0, mdx = 0, mdy = 0, lkx = 0, lky = 0, l2x = 0, l2y = 0, hN = 0, hMax = 0, hMin = 1e9, hPer = 1e9, hLate = 0, hTot = 0, tId = -1, tN = 0, tx0 = 0, ty0 = 0, tx = 0, ty = 0;
-const TANH = 0.62, NEAR = 0.1, EXPO = 0.72, RAYS = 0.58;
+const TANH = 0.62, NEAR = 0.1, EXPO = 0.85, RAYS = 0.22;
 const submitList = [null];
 const rowOrd = new Uint8Array(CELLS);
 

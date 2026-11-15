@@ -74,7 +74,7 @@ fn dens(p: vec3f) -> f32 {
     let a = P[k]; let b = P[k + 1u]; k += 2u;
     let td = octSeg(q, a.xyz, vec3f(a.w, b.xy), b.z, b.w);
     d = smin(d, td, 2.8);
-    rgh = mix(rgh, .22, ss(4., -2., td));
+    rgh = mix(rgh, .09, ss(4., -2., td));
   }
   // 4. Smooth machined zones (CLEARS)
   var clr = 0.;
@@ -265,29 +265,36 @@ fn caus2(p: vec3f, d: f32) -> f32 {
   let c = min(pow(textureSample(tW, sR, q / 4.2).r, 1.4) * 2.4 * (.45 + textureSample(tW, sR, q.yx / 7.2 + .37).r * 1.2), 2.5);
   return mix(c, .35, ss(40., 110., d));
 }
-// Pyro-GX Ship Headlights + Local Mine Radiance
-fn headlight(p: vec3f, n: vec3f) -> vec3f {
-  let v = p - g.cam.xyz;
+// Twin off-axis Pyro-GX Wingtip Headlights (prevents central glare washout)
+fn spotLight(p: vec3f, n: vec3f, orig: vec3f, fw: vec3f) -> f32 {
+  let v = p - orig;
   let d = max(length(v), .5);
   let dir = v / d;
-  let fw = normalize(g.fwd.xyz);
-  let spot = ss(.74, .96, dot(dir, fw));
-  let att = exp(-d * .026) * (1. / (1. + d * d * .0018));
+  let spot = ss(.76, .93, dot(dir, fw));
+  let att = exp(-d * .032) * (1. / (1. + d * d * .0024));
   let ndl = sat(dot(n, -dir));
-  return vec3f(1.6, 1.48, 1.25) * spot * att * (.25 + .75 * ndl) * 3.4;
+  return spot * att * (.22 + .78 * ndl);
 }
-fn sunE(y: f32, z: f32) -> vec3f { return mix(vec3f(1.5, 1.15, .85), vec3f(.85, 1.45, 1.85), z); }
+fn headlight(p: vec3f, n: vec3f) -> vec3f {
+  let fw = normalize(g.fwd.xyz);
+  let off = g.right.xyz * 1.35;
+  let drop = g.up.xyz * .45;
+  let l = spotLight(p, n, g.cam.xyz - off - drop, fw)
+        + spotLight(p, n, g.cam.xyz + off - drop, fw);
+  return vec3f(1.25, 1.15, .98) * l * 1.35;
+}
+fn sunE(y: f32, z: f32) -> vec3f { return mix(vec3f(.65, .52, .38), vec3f(.32, .68, 1.0), z); }
 fn vol(p: vec3f) -> vec4f { return textureSampleLevel(tV, sC, (p - vec3f(-192., -78., -192.)) / vec3f(384., 84., 384.), 0.); }
 fn amb(p: vec3f, n: vec3f, sky: f32, z: f32) -> vec3f {
-  let lavaGlow = ss(-34., -52., p.y) * max(-n.y * .6 + .4, .2) * vec3f(1.4, .38, .06);
-  let base = mix(vec3f(.26, .28, .34), vec3f(.18, .44, .72), z) * (.35 + 1.45 * sky);
-  return base + lavaGlow + vec3f(.025, .028, .035);
+  let lavaGlow = ss(-34., -52., p.y) * max(-n.y * .6 + .4, .2) * vec3f(1.15, .30, .04);
+  let base = mix(vec3f(.08, .09, .12), vec3f(.05, .14, .28), z) * (.22 + 1.35 * sky);
+  return base + lavaGlow + vec3f(.012, .014, .018);
 }
 fn zone(p: vec3f) -> f32 { return mix(g.sun.w, textureSampleLevel(tM, sC, p.xz / 384. + .5, 0.).b, .45); }
-fn side(p: vec3f, n: vec3f, open: f32, z: f32) -> vec3f { return mix(vec3f(.45, .28, .16), vec3f(.20, .52, .85), z) * open * (1. - abs(n.y)) * .65; }
+fn side(p: vec3f, n: vec3f, open: f32, z: f32) -> vec3f { return mix(vec3f(.18, .10, .06), vec3f(.06, .18, .32), z) * open * (1. - abs(n.y)) * .45; }
 fn fog(c: vec3f, wp: vec3f, z: f32) -> vec3f {
   let v = wp - g.cam.xyz; let d = length(v); let rd = v / d;
-  return c * exp(-sg(z) * d) * ss(220., 175., d) + fogIn(g.cam.xyz, rd, d, z, g.sun.xyz) * (.45 + .65 * vol(g.cam.xyz + rd * min(d, 90.)).g);
+  return c * exp(-sg(z) * d) * ss(220., 175., d) + fogIn(g.cam.xyz, rd, d, z, g.sun.xyz) * (.35 + .55 * vol(g.cam.xyz + rd * min(d, 90.)).g);
 }
 fn qrot(q: vec4f, v: vec3f) -> vec3f { return v + 2. * cross(q.xyz, cross(q.xyz, v) + q.w * v); }
 `;
@@ -328,100 +335,97 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
   let big2 = textureSample(tD, sR, i.op.zx * .033 + i.op.y * .043 + .37).a;
   var sgro = 0.;
   let gm = textureSample(tM, sC, i.wp.xz / 384. + .5);
-  let ca = caus(i.wp, dist);
   let hgt = A.h * .5 + B.h * .35 + C.h * .15;
   var bump = 1.6; var gloss = .25; var alb = vec3f(0.); var emi = vec3f(0.); var vao = 1.; var flu = 0.;
   let flt = ss(.68, .92, abs(n0.y));
   let wall = 1. - abs(n0.y);
   if (mat == 0) {
     // Subterranean Mine Walls, Floors & Ceilings:
-    // Mix raw blasted basalt/oxidized Martian rock with recessed concrete/steel wall panels, hazard stripes, and ceiling light strips!
+    // Dark blasted basalt/oxidized ore contrasted with machined steel wall panels, floor grates, and recessed ceiling light bars
     let st = i.wp.y * .45 + A.h * 1.1 + big * 3.;
     let bed = hs(floor(st)); let sf = fract(st);
-    // Base blasted asteroid rock (dark slate, rust-red oxidized ore, greenish mineral veins)
-    alb = mix(vec3f(.14, .15, .17), vec3f(.36, .24, .18), sat(A.c * 1.4 - .2));
-    alb = mix(alb, mix(vec3f(.32, .16, .10), vec3f(.16, .24, .22), bed), ss(.4, .65, big) * .75);
-    // Industrial steel wall paneling & caution hazard stripes along tunnel datum lines
+    alb = mix(vec3f(.065, .070, .080), vec3f(.18, .10, .07), sat(A.c * 1.4 - .2));
+    alb = mix(alb, mix(vec3f(.16, .08, .05), vec3f(.08, .12, .11), bed), ss(.4, .65, big) * .7);
+    // Recessed industrial steel wall paneling
     let band = ss(.3, .7, sin(i.wp.y * .55) * .5 + .5) * wall;
     let pan = B.c * ss(.35, .65, gm.r + .25) * band;
-    alb = mix(alb, vec3f(.22, .25, .28) * (.55 + .6 * B.h), pan * .85);
-    // 45-degree Yellow & Black Hazard Stripes along lower wall trim & chamber bulkheads
-    let hazMask = wall * ss(.72, .88, sin(i.wp.y * .85 + .4)) * ss(.25, .55, gm.r);
+    alb = mix(alb, vec3f(.13, .15, .18) * (.55 + .6 * B.h), pan * .88);
+    // Crisp 45-degree Yellow & Black Hazard Stripes strictly on narrow machined wall datum trim
+    let yBand = ss(.48, .18, abs(fract(i.wp.y * .125) - .5) * 8.);
+    let hazMask = wall * yBand * ss(.50, .72, gm.r) * ss(.30, .60, pan);
     let stripe = step(.5, fract((i.wp.x + i.wp.z + i.wp.y * 1.2) * 1.35));
-    let hazCol = mix(vec3f(.05, .05, .06), vec3f(.92, .68, .04), stripe);
-    alb = mix(alb, hazCol * (.6 + .5 * B.h), hazMask * .9);
+    let hazCol = mix(vec3f(.04, .04, .05), vec3f(.88, .62, .03), stripe);
+    alb = mix(alb, hazCol * (.6 + .5 * B.h), hazMask * .92);
     // Metal deck grating on flat tunnel floors
     let grate = step(.35, fract(i.wp.x * 1.5)) * step(.35, fract(i.wp.z * 1.5));
-    alb = mix(alb, vec3f(.16, .18, .21) * (.45 + .65 * grate) * (.6 + .5 * B.h), ss(.75, .92, n0.y) * gm.a * .85);
-    // Glowing recessed fluorescent / plasma light strips in tunnel ceilings & walls
+    alb = mix(alb, vec3f(.10, .11, .13) * (.42 + .65 * grate) * (.6 + .5 * B.h), ss(.75, .92, n0.y) * gm.a * .88);
+    // Glowing recessed fluorescent / plasma light strips in tunnel ceilings & red wall beacons
     let lGridZ = abs(fract(i.wp.z * .125) - .5);
     let lGridX = abs(fract(i.wp.x * .125) - .5);
     let ceilStrip = ss(-.70, -.92, n0.y) * ss(.08, .03, min(lGridX, lGridZ)) * step(.25, B.c);
     let wallBeacon = wall * ss(.94, .98, sin(i.wp.y * .85)) * ss(.06, .02, min(lGridX, lGridZ));
     let lCol = mix(vec3f(1.8, 1.35, .85), vec3f(.35, 1.4, 2.2), gm.b);
-    emi += lCol * (ceilStrip * 2.2 + wallBeacon * vec3f(2.2, .35, .1) * (1.2 + .8 * sin(g.cam.w * 4. + i.wp.x * .2)));
+    emi += lCol * (ceilStrip * 2.6 + wallBeacon * vec3f(2.4, .35, .1) * (1.2 + .8 * sin(g.cam.w * 4. + i.wp.x * .2)));
     // Deep magma fissure glow near bottom of East Foundry & Reactor Pit
     let fis = ss(-43., -51., i.wp.y) * ss(.52, .72, A.c);
     emi += vec3f(3.2, .65, .08) * fis * 1.8;
-    alb *= (.28 + 1.2 * hgt) * mix(1., .65 + .7 * F.h, fk);
+    alb *= (.35 + 1.15 * hgt) * mix(1., .65 + .7 * F.h, fk);
     sgro = -ss(.14, .0, sf) * wall * 1.1;
-    gloss = mix(.2, .65, pan + hazMask + flt * gm.a);
+    gloss = mix(.22, .68, pan + hazMask + flt * gm.a);
   } else if (mat == 1) {
     // Structural Steel Bulkhead Frames (Mesh 10) & Asteroid Ore Boulders
-    let isFrame = step(.01, abs(i.m.w) * -1. + .005); // boulders have bob > 0, frames have bob == 0
     let stripe = step(.5, fract((i.op.x + i.op.y + i.op.z) * 1.6));
-    let haz = mix(vec3f(.06, .06, .07), vec3f(.95, .70, .05), stripe);
-    alb = mix(vec3f(.24, .27, .31), vec3f(.42, .45, .48), B.c) * (.55 + .6 * A.h);
-    alb = mix(alb, haz, ss(.55, .75, abs(on.z)) * .55);
+    let haz = mix(vec3f(.05, .05, .06), vec3f(.92, .65, .04), stripe);
+    alb = mix(vec3f(.16, .18, .22), vec3f(.30, .33, .36), B.c) * (.55 + .6 * A.h);
+    alb = mix(alb, haz, ss(.55, .75, abs(on.z)) * .62);
     // Integrated bulkhead status beacon lights
     let bLit = ss(.82, .92, abs(sin(i.op.y * 2.4))) * ss(.4, .1, abs(on.z));
-    emi = mix(vec3f(2.4, .55, .08), vec3f(.2, 1.6, 2.4), step(.5, sd)) * bLit * 1.5;
+    emi = mix(vec3f(2.4, .55, .08), vec3f(.2, 1.6, 2.4), step(.5, sd)) * bLit * 1.6;
     gloss = .75; bump = 1.1;
   } else if (mat == 2 || mat == 3) {
     // Reactor Core (mat 2) & Smelting Rig (mat 3): Heavy gunmetal shielding + pulsing Cherenkov/Plasma energy core
     let pulse = .65 + .35 * sin(g.cam.w * 4.5 + i.op.y * .6);
     let coreZone = ss(4.8, 2.2, length(i.op.xz)) * ss(.2, .75, abs(sin(i.op.y * .85 + g.cam.w * 1.5)));
-    let shield = mix(vec3f(.15, .18, .22), vec3f(.38, .42, .46), B.c) * (.5 + .6 * A.h);
+    let shield = mix(vec3f(.12, .14, .18), vec3f(.30, .34, .38), B.c) * (.5 + .6 * A.h);
     let eCol = select(vec3f(.15, 1.6, 2.8), vec3f(2.8, .75, .12), mat == 3 || sin(i.op.y * .4) > .2);
     alb = mix(shield, eCol * .5, coreZone);
     emi = eCol * coreZone * pulse * 3.8;
-    // Hazard stripes on reactor containment rings
     let ringHaz = ss(5.2, 6.2, length(i.op.xz)) * step(.5, fract((i.op.x + i.op.z) * 1.2));
-    alb = mix(alb, vec3f(.95, .68, .05), ringHaz * .7);
+    alb = mix(alb, vec3f(.92, .65, .04), ringHaz * .7);
     gloss = .85; bump = .8;
   } else if (mat == 4) {
-    // Industrial Fuel Canisters, Supply Cylinders & Pipe Manifolds
+    // Industrial Supply Crates, Louvered Transformers, Emitter Pads & Pipe Manifolds
     let hue = fract(sd * 7.31);
-    alb = mix(vec3f(.28, .32, .36), vec3f(.65, .42, .12), step(.5, hue));
-    if (hue > .75) { alb = vec3f(.18, .45, .58); }
-    alb *= (.5 + .7 * B.h);
+    alb = mix(vec3f(.18, .21, .25), vec3f(.48, .30, .10), step(.5, hue));
+    if (hue > .75) { alb = vec3f(.14, .32, .42); }
+    alb *= (.55 + .65 * B.h);
     let band = ss(.12, .04, abs(fract(i.op.y * 1.8) - .5));
-    emi = mix(vec3f(1.8, .6, .1), vec3f(.1, 1.5, 2.2), step(.5, hue)) * band * .9;
-    vao = i.ao * i.ao; gloss = .7; bump = 1.1;
+    emi = mix(vec3f(1.8, .6, .1), vec3f(.1, 1.5, 2.2), step(.5, hue)) * band * 1.1;
+    vao = i.ao * i.ao; gloss = .75; bump = 0.85;
   } else {
-    // Defense Laser Turrets & High-Voltage Quartz/Energy Crystals
+    // Defense Laser Turrets & High-Voltage Quartz/Energy Capacitors
     let hue = fract(sd * 5.73);
-    alb = mix(vec3f(.32, .35, .40), vec3f(.75, .18, .12), fract(hue * 3.));
-    alb *= (.45 + .75 * B.h) * (.5 + .8 * i.ao);
+    alb = mix(vec3f(.20, .23, .28), vec3f(.58, .15, .10), fract(hue * 3.));
+    alb *= (.5 + .7 * B.h) * (.5 + .8 * i.ao);
     let tip = ss(.65, .92, i.ao);
-    emi = mix(vec3f(2.4, .25, .15), vec3f(.2, 1.8, 2.5), step(.5, hue)) * tip * 1.8;
-    flu = .6; gloss = .8; bump = 1.0;
+    emi = mix(vec3f(2.6, .25, .12), vec3f(.2, 1.8, 2.6), step(.5, hue)) * tip * 1.9;
+    flu = .6; gloss = .8; bump = 0.8;
   }
   let N = normalize(qrot(i.q, normalize(on + (A.n * .8 + B.n * .6 + C.n * .4 * ss(60., 12., dist) + F.n * .4 * fk) * bump + vec3f(0., sgro, 0.))));
   let L = normalize(vec3f(.25, .85, -.35)); let V = normalize(g.cam.xyz - i.wp);
   let v1 = vol(i.wp + n0 * 1.5); let v2 = vol(i.wp + n0 * 4.2);
   let ao = (sat((v1.r - .35) * 3.5) * .55 + sat((v2.r - .35) * 2.2) * .45) * vao * ss(.1, .55, hgt);
   let z = zone(i.wp);
-  let E = sunE(i.wp.y, z) * (.35 + 1.15 * v1.g);
+  let E = sunE(i.wp.y, z) * v1.g * .85;
   let hl = headlight(i.wp, N);
-  let ndl = sat(dot(N, L)) * .6 + .4;
+  let ndl = sat(dot(N, L)) * .5 + .5;
   let am = (amb(i.wp, N, v1.g, z) + side(i.wp, N, sat((v2.r - .35) * 2.5), z)) * ao;
-  let dl = E * ndl * (.25 + ca * .85) + hl;
+  let dl = E * ndl + hl;
   var c = alb * (dl + am) + emi + alb * flu * dot(dl + am, vec3f(.2, .4, .4));
   let hv = V + normalize(g.fwd.xyz * -.5 + vec3f(0., 1., 0.));
   let H = hv / max(length(hv), 1e-4);
-  c += (E * .5 + hl * .8) * pow(sat(dot(N, H)), mix(12., 64., gloss)) * gloss * 1.4;
-  c += amb(i.wp, reflect(-V, N), v1.g, z) * ao * (.12 + gloss) * .65 * pow(1. - sat(dot(N, V)), 2.5);
+  c += (E * .35 + hl * .65) * pow(sat(dot(N, H)), mix(12., 64., gloss)) * gloss * 1.1;
+  c += amb(i.wp, reflect(-V, N), v1.g, z) * ao * (.10 + gloss) * .45 * pow(1. - sat(dot(N, V)), 2.5);
   return fin(fog(c, i.wp, z));
 }
 `;
@@ -435,9 +439,7 @@ struct LO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n
   @location(3) @interpolate(flat) col: vec3f, @location(4) @interpolate(flat) pr: vec4f,
   @location(5) @interpolate(flat) sd: vec2f, @location(6) @interpolate(flat) spc: vec3f };
 fn sway(p: vec2f, h: f32, t: f32) -> vec2f {
-  let ph = dot(p, vec2f(.031, .017));
-  let a = .008 * pow(max(h, 0.), 1.1);
-  return a * vec2f(sin(t * .6 + ph), cos(t * .5 + ph * 1.3));
+  return vec2f(0.);
 }
 fn shape2(v: f32) -> f32 { return sin(3.14159 * sat(v)); }
 fn pal(h: f32) -> vec3f {
@@ -698,23 +700,21 @@ const W_RAYS = S_G + W_FS + /*wgsl*/`
   let rl = length(rv); let rd = rv / rl;
   let zl = g.fwd.w / max(dp, 1e-6);
   let tm = min(zl * rl, 95.);
-  let ro = g.cam.xyz; let fw = normalize(g.fwd.xyz); let sgz = sg(g.sun.w);
+  let ro = g.cam.xyz; let sgz = sg(g.sun.w);
   let dt = tm / ${RAYN}.;
   let j = ign(fc.xy);
   var acc = vec3f(0.);
-  let spot = ss(.78, .96, dot(rd, fw));
   for (var n = 0; n < ${RAYN}; n++) {
     let t = (f32(n) + j) * dt;
     let p = ro + rd * t;
     let v = textureSampleLevel(tV, sC, (p - vec3f(-192., -78., -192.)) / vec3f(384., 84., 384.), 0.);
     let pat = .4 + .6 * textureSampleLevel(tW, sR, p.xz / 22. + p.y * .03, 2.).r;
-    let hBeam = spot * exp(-t * .045) * 1.4;
-    let chGlow = v.g * v.g * pat * 1.8;
+    let chGlow = pow(v.g, 2.8) * pat * .75;
     let z = g.sun.w;
-    let col = mix(vec3f(1.2, .75, .42), vec3f(.35, .85, 1.35), z) * chGlow + vec3f(1.1, 1.0, .85) * hBeam;
+    let col = mix(vec3f(1.1, .55, .22), vec3f(.25, .75, 1.25), z) * chGlow;
     acc += exp(-sgz * t) * col;
   }
-  return vec4f(min(acc * dt * sgz * g.mis.y * 1.6, vec3f(16.)), zl);
+  return vec4f(min(acc * dt * sgz * g.mis.y * .9, vec3f(8.)), zl);
 }
 `;
 // depth-aware 3x3 blur of the half-res shafts (hides the sampling dither)
