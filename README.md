@@ -2,15 +2,12 @@
 
 **A procedural 6DoF subterranean mine you can fly through in your browser — built to test whether the [Abyssal Garden](https://github.com/Noniv/abyssal-garden) WebGPU engine can handle fully enclosed *Descent*-style geometry.**
 
-The free-floating 3D movement and voxel wall-sliding collision in the original *Abyssal Garden* underwater demo felt unmistakably reminiscent of Parallax Software's 1995 6DoF shooter *Descent*. **Abyssal Mine** flips the original open-top seabed inside out—starting from solid asteroid rock and carving out an interconnected network of closed octagonal tunnels, vertical mining shafts, molten magma foundries, and a central Reactor Core, all in **one 85.5 KB self-contained HTML file** with no external textures, models, or audio files.
+The free-floating 3D movement and voxel wall-sliding collision in the original *Abyssal Garden* underwater demo felt unmistakably reminiscent of Parallax Software's 1995 6DoF shooter *Descent*. **Abyssal Mine** flips the original open-top seabed inside out—starting from solid asteroid rock and carving out an interconnected network of closed octagonal tunnels, vertical mining shafts, molten magma foundries, and a central Reactor Core, all in **one 84.2 KB self-contained HTML file** with no external textures, models, or audio files.
 
 ## Try it
 
-1. Download [`index.html`](index.html).
-2. Open it in **Chrome** or **Edge** on a desktop computer.
-3. Wait a few seconds while the mine is excavated on your GPU, then press **Launch Pyro-GX** to fly.
-
-Nothing to install, and it works offline. It requires a browser with **WebGPU**.
+- **Live Demo:** **[https://hoyajavis.github.io/abyssal-mine/](https://hoyajavis.github.io/abyssal-mine/)**
+- **Offline:** Download [`index.html`](index.html) and open it in **Chrome** or **Edge** (requires **WebGPU**). Wait a few seconds while the mine is excavated on your GPU, then press **Launch Pyro-GX** to fly.
 
 ## Closed-Geometry & *Descent* Adaptations
 
