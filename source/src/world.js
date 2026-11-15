@@ -5,15 +5,15 @@
 // Subterranean mine chambers (octagonal/domed vaults):
 // [cx, cy, cz, rx, ry, rz, octagonalBevel, roughness]
 const MESAS = [
-  [0, -28, 0, 32, 22, 32, 0.35, 0.25],       // 0: Central Reactor Core Cavern
-  [0, -34, -88, 28, 28, 28, 0.3, 0.3],       // 1: North Vertical Mining Shaft
-  [64, -36, 12, 28, 20, 26, 0.25, 0.45],     // 2: East Molten Magma Foundry
-  [-62, -28, -8, 24, 18, 26, 0.4, 0.2],      // 3: West Automated Processing Bay
-  [6, -28, 84, 28, 20, 28, 0.35, 0.3],       // 4: South Energy Center & Recharge Vault
-  [-44, -36, -64, 18, 15, 18, 0.3, 0.5],     // 5: NW Ore Junction
-  [44, -32, -62, 18, 15, 18, 0.35, 0.35],    // 6: NE Cooling Substation
-  [-40, -32, 46, 18, 15, 18, 0.35, 0.35],    // 7: SW Conduit Hub
-  [42, -34, 54, 18, 15, 18, 0.3, 0.4],       // 8: SE Smelting Annex
+  [0, -28, 0, 32, 22, 32, 0.35, 0.32],       // 0: Central Reactor Core Cavern
+  [0, -34, -88, 28, 28, 28, 0.3, 0.38],      // 1: North Vertical Mining Shaft
+  [64, -36, 12, 28, 20, 26, 0.25, 0.48],     // 2: East Molten Magma Foundry
+  [-62, -28, -8, 24, 18, 26, 0.4, 0.16],     // 3: West Automated Processing Bay
+  [6, -28, 84, 28, 20, 28, 0.35, 0.22],      // 4: South Energy Center & Recharge Vault
+  [-44, -36, -64, 18, 15, 18, 0.3, 0.52],    // 5: NW Ore Junction
+  [44, -32, -62, 18, 15, 18, 0.35, 0.28],    // 6: NE Cooling Substation
+  [-40, -32, 46, 18, 15, 18, 0.35, 0.28],    // 7: SW Conduit Hub
+  [42, -34, 54, 18, 15, 18, 0.3, 0.45],      // 8: SE Smelting Annex
 ];
 
 // Deformed hexahedral / octagonal tunnel segments (6DoF corridors & shafts):
@@ -41,15 +41,18 @@ const HOLES = [
   [0, -52, -88, 0, -6, -88, 11.0, 11.0],     // Vertical Core of North Mining Shaft
 ];
 
-// Structural pillars & monoliths left inside chambers:
+// Planar structural support columns & horizontal cross-girders inside chambers:
 // [ax, ay, az, bx, by, bz, radius, bevel]
 const ARCHES = [
-  [-20, -54, -20, -20, -2, -20, 2.8, 0.4],   // Reactor NW Shield Pillar
-  [20, -54, -20, 20, -2, -20, 2.8, 0.4],     // Reactor NE Shield Pillar
-  [-20, -54, 20, -20, -2, 20, 2.8, 0.4],     // Reactor SW Shield Pillar
-  [20, -54, 20, 20, -2, 20, 2.8, 0.4],       // Reactor SE Shield Pillar
+  [-20, -54, -20, -20, -2, -20, 2.8, 0.4],   // Reactor NW Shield Column
+  [20, -54, -20, 20, -2, -20, 2.8, 0.4],     // Reactor NE Shield Column
+  [-20, -54, 20, -20, -2, 20, 2.8, 0.4],     // Reactor SW Shield Column
+  [20, -54, 20, 20, -2, 20, 2.8, 0.4],       // Reactor SE Shield Column
+  [-20, -12, -12, 20, -12, -12, 2.0, 0.4],   // Reactor North Overhead Cross-Girder
+  [-20, -12, 12, 20, -12, 12, 2.0, 0.4],     // Reactor South Overhead Cross-Girder
   [74, -60, 0, 74, -12, 0, 3.0, 0.3],        // Foundry Support Column 1
   [74, -60, 24, 74, -12, 24, 3.0, 0.3],      // Foundry Support Column 2
+  [50, -20, 0, 78, -20, 0, 2.1, 0.3],        // Foundry Overhead Crane Girder
   [-68, -52, -16, -68, -6, -16, 2.8, 0.5],   // West Bay Pylon
 ];
 

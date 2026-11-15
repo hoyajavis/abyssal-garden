@@ -119,35 +119,41 @@ function createDensityEvaluator() {
     const wx = withNoise ? fbm3(px * 0.045 + 11, py * 0.045 + 11, pz * 0.045 + 11, 3) - 0.5 : 0;
     const wy = withNoise ? fbm3(px * 0.045 + 47, py * 0.045 + 47, pz * 0.045 + 47, 3) - 0.5 : 0;
     const wz = withNoise ? fbm3(px * 0.045 + 83, py * 0.045 + 83, pz * 0.045 + 83, 3) - 0.5 : 0;
-    const qx = px + wx * 3.2, qy = py + wy * 2.2, qz = pz + wz * 3.2;
     let d = 24;
     let rgh = 1;
     for (const m of MESAS) {
+      const ws = clamp(m[7] * 2.4, 0.15, 1.25);
+      const qx = px + wx * 3.4 * ws, qy = py + wy * 2.4 * ws, qz = pz + wz * 3.4 * ws;
       const lx = abs(qx - m[0]) - m[3], ly = abs(qy - m[1]) - m[4], lz = abs(qz - m[2]) - m[5];
       const box3 = max(lx, max(ly, lz));
       const chm = max(box3, (lx + ly + lz) * 0.62 + min(m[3], m[4]) * m[6]);
-      d = smin(d, chm, 3.5);
-      rgh = mix(rgh, m[7], ss(8, -4, chm));
+      d = smin(d, chm, 2.4);
+      rgh = mix(rgh, m[7], ss(6, -2, chm));
     }
     for (const h of HOLES) {
-      const td = octSeg(qx, qy, qz, h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7]);
-      d = smin(d, td, 2.8);
-      rgh = mix(rgh, 0.22, ss(4, -2, td));
+      const bax = h[3] - h[0], bay_ = h[4] - h[1], baz = h[5] - h[2];
+      const bl = Math.hypot(bax, bay_, baz) || 1;
+      const sProj = (px - h[0]) * (bax / bl) + (py - h[1]) * (bay_ / bl) + (pz - h[2]) * (baz / bl);
+      const bay = (abs(fract(sProj * 0.125) - 0.5) >= 0.22 ? 1 : 0) * 0.32;
+      const td = octSeg(px, py, pz, h[0], h[1], h[2], h[3], h[4], h[5], h[6] + bay, h[7] + bay * 0.5);
+      d = smin(d, td, 0.55);
+      rgh = mix(rgh, 0.025, ss(1.8, -0.4, td));
     }
     let clr = 0;
     for (const c of CLEARS) {
       clr = max(clr, 1 - ss(0, c[5], seg2(px, pz, c[0], c[1], c[2], c[3]) - c[4]));
     }
     for (const a of ARCHES) {
-      const pil = octSeg(px + wx * 0.8, py + wy * 0.8, pz + wz * 0.8, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[6]);
-      d = smax(d, -pil, 1.5);
+      const pil = octSeg(px, py, pz, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[6]);
+      d = smax(d, -pil, 0.4);
+      rgh = mix(rgh, 0.015, ss(1.5, -0.2, pil));
     }
     if (withNoise) {
-      const rk = mix(0.18, 1, rgh * (1 - clr * 0.65));
+      const rk = clamp(rgh * (1 - clr * 0.75), 0.015, 1);
       d += rk * ((0.5 - wor(px * 0.18 + wx * 1.5, py * 0.18 + wy * 1.5, pz * 0.18 + wz * 1.5)) * 2.8 +
                  (0.5 - wor(px * 0.42 + 7, py * 0.42 + 7, pz * 0.42 + 7)) * 1.1 +
                  (fbm3(px * 0.28, py * 0.28, pz * 0.28, 3) - 0.5) * 1.6);
-      d += 0.55 * (abs(fract(py * 0.25) - 0.5) - 0.25);
+      d += mix(0.18, 0.45, rk) * (abs(fract(py * 0.25) - 0.5) - 0.25);
     }
     d = smax(d, -54.5 - py, 1.5);
     d = smax(d, py + 1.5, 1.5);

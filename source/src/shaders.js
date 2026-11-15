@@ -35,7 +35,7 @@ struct U { n: vec4u, o: vec4f, c: vec4u };
 fn smax(a: f32, b: f32, k: f32) -> f32 { let h = max(k - abs(a - b), 0.) / k; return max(a, b) + h * h * k * .25; }
 fn smin(a: f32, b: f32, k: f32) -> f32 { return -smax(-a, -b, k); }
 fn seg2(p: vec2f, a: vec2f, b: vec2f) -> f32 { let pa = p - a; let ba = b - a; let h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-4), 0., 1.); return length(pa - ba * h); }
-// Octagonal / chamfered-box tunnel cross-section SDF along 3D segment AB
+// Octagonal / chamfered-box tunnel & girder cross-section SDF along 3D segment AB
 fn octSeg(p: vec3f, a: vec3f, b: vec3f, rw: f32, rh: f32) -> f32 {
   let ba = b - a; let l2 = max(dot(ba, ba), 1e-4);
   let h = clamp(dot(p - a, ba) / l2, 0., 1.);
@@ -53,28 +53,31 @@ fn octSeg(p: vec3f, a: vec3f, b: vec3f, rw: f32, rh: f32) -> f32 {
 }
 fn dens(p: vec3f) -> f32 {
   let w = vec3f(fbm(p * .045 + 11., 3), fbm(p * .045 + 47., 3), fbm(p * .045 + 83., 3)) - .5;
-  let q = p + w * vec3f(3.2, 2.2, 3.2);
   var d = 24.; // Start with solid subterranean asteroid rock
   var rgh = 1.;
   var k = 0u;
-  // 1. Carve Major Octagonal Chambers (MESAS)
+  // 1. Carve Major Octagonal Chambers (MESAS) — Natural caverns retain organic domain warping scaled by b.w!
   for (var i = 0u; i < u.c.x; i++) {
     let a = P[k]; let b = P[k + 1u]; k += 2u;
-    let l = abs(q - a.xyz) - vec3f(a.w, b.x, b.y);
+    let qw = p + w * vec3f(3.4, 2.4, 3.4) * clamp(b.w * 2.4, .15, 1.25);
+    let l = abs(qw - a.xyz) - vec3f(a.w, b.x, b.y);
     let box3 = max(l.x, max(l.y, l.z));
     let chm = max(box3, (l.x + l.y + l.z) * .62 + min(a.w, b.x) * b.z);
-    d = smin(d, chm, 3.5);
-    rgh = mix(rgh, b.w, ss(8., -4., chm));
+    d = smin(d, chm, 2.4);
+    rgh = mix(rgh, b.w, ss(6., -2., chm));
   }
-  // 2. Skip ARCHES for now (processed after tunnels so pillars stand inside chambers)
+  // 2. Skip ARCHES for now (processed after tunnels so pillars & girders stand inside chambers)
   let kArch = k;
   k += u.c.y * 2u;
-  // 3. Carve 6DoF Deformed-Cube / Octagonal Tunnel Segments (HOLES)
+  // 3. Carve Precision-Bored 6DoF Octagonal Tunnel Segments (HOLES) — Unwarped planar walls + 8m cube-segment bays!
   for (var i = 0u; i < u.c.z; i++) {
     let a = P[k]; let b = P[k + 1u]; k += 2u;
-    let td = octSeg(q, a.xyz, vec3f(a.w, b.xy), b.z, b.w);
-    d = smin(d, td, 2.8);
-    rgh = mix(rgh, .09, ss(4., -2., td));
+    let ba = vec3f(a.w, b.xy) - a.xyz;
+    let sProj = dot(p - a.xyz, normalize(ba));
+    let bay = step(.22, abs(fract(sProj * .125) - .5)) * .32;
+    let td = octSeg(p, a.xyz, vec3f(a.w, b.xy), b.z + bay, b.w + bay * .5);
+    d = smin(d, td, .55);
+    rgh = mix(rgh, .025, ss(1.8, -.4, td));
   }
   // 4. Smooth machined zones (CLEARS)
   var clr = 0.;
@@ -82,17 +85,18 @@ fn dens(p: vec3f) -> f32 {
     let a = P[k]; let b = P[k + 1u]; k += 2u;
     clr = max(clr, 1. - ss(0., b.y, seg2(p.xz, a.xy, a.zw) - b.x));
   }
-  // 5. Add Structural Shield Pillars & Monoliths (ARCHES)
+  // 5. Add Planar Structural Support Columns & Cross-Girders (ARCHES) — Unwarped crisp octagonal shafts!
   var kp = kArch;
   for (var i = 0u; i < u.c.y; i++) {
     let a = P[kp]; let b = P[kp + 1u]; kp += 2u;
-    let pil = octSeg(p + w * .8, a.xyz, vec3f(a.w, b.xy), b.z, b.z);
-    d = smax(d, -pil, 1.5);
+    let pil = octSeg(p, a.xyz, vec3f(a.w, b.xy), b.z, b.z);
+    d = smax(d, -pil, .4);
+    rgh = mix(rgh, .015, ss(1.5, -.2, pil));
   }
-  // 6. Subterranean blasted rock & Worley mineral facets + horizontal concrete ribs
-  let rk = mix(.18, 1., rgh * (1. - clr * .65));
+  // 6. Natural asteroid rock Worley mineral facets (on rough cavern walls) vs clean machined ribs (on tunnels/supports)
+  let rk = clamp(rgh * (1. - clr * .75), .015, 1.);
   d += rk * ((.5 - wor(p * .18 + w * 1.5)) * 2.8 + (.5 - wor(p * .42 + 7.)) * 1.1 + (fbm(p * .28, 3) - .5) * 1.6);
-  d += .55 * (abs(fract(p.y * .25) - .5) - .25);
+  d += mix(.18, .45, rk) * (abs(fract(p.y * .25) - .5) - .25);
   // Keep global solid bedrock floor below magma level (-54) and solid ceiling cap above y = -2
   d = smax(d, -54.5 - p.y, 1.5);
   d = smax(d, p.y + 1.5, 1.5);
@@ -378,24 +382,28 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
   } else if (mat == 1) {
     // Structural Steel Bulkhead Frames (Mesh 10) & Asteroid Ore Boulders
     let stripe = step(.5, fract((i.op.x + i.op.y + i.op.z) * 1.6));
-    let haz = mix(vec3f(.05, .05, .06), vec3f(.92, .65, .04), stripe);
-    alb = mix(vec3f(.16, .18, .22), vec3f(.30, .33, .36), B.c) * (.55 + .6 * A.h);
-    alb = mix(alb, haz, ss(.55, .75, abs(on.z)) * .62);
-    // Integrated bulkhead status beacon lights
-    let bLit = ss(.82, .92, abs(sin(i.op.y * 2.4))) * ss(.4, .1, abs(on.z));
-    emi = mix(vec3f(2.4, .55, .08), vec3f(.2, 1.6, 2.4), step(.5, sd)) * bLit * 1.6;
-    gloss = .75; bump = 1.1;
+    let haz = mix(vec3f(.04, .04, .05), vec3f(.88, .62, .04), stripe);
+    alb = mix(vec3f(.11, .13, .16), vec3f(.22, .25, .29), B.c) * (.55 + .6 * A.h);
+    // Restrict hazard stripes to corner gusset bumpers only
+    let corner = ss(.65, .85, abs(i.op.x)) * ss(.55, .75, abs(i.op.y));
+    alb = mix(alb, haz, corner * ss(.45, .75, abs(on.z)) * .85);
+    // Small recessed bulkhead navigation LEDs
+    let bLit = ss(.92, .97, abs(sin(i.op.y * 1.6))) * ss(.25, .05, abs(on.z)) * step(.01, .005 - abs(i.m.w));
+    emi = mix(vec3f(1.8, .45, .08), vec3f(.2, 1.4, 2.0), step(.5, sd)) * bLit * 1.1;
+    gloss = .78; bump = .9;
   } else if (mat == 2 || mat == 3) {
-    // Reactor Core (mat 2) & Smelting Rig (mat 3): Heavy gunmetal shielding + pulsing Cherenkov/Plasma energy core
+    // Reactor Core (mat 2) & Smelting Rig (mat 3): Heavy dark gunmetal shielding + glowing internal plasma core
     let pulse = .65 + .35 * sin(g.cam.w * 4.5 + i.op.y * .6);
-    let coreZone = ss(4.8, 2.2, length(i.op.xz)) * ss(.2, .75, abs(sin(i.op.y * .85 + g.cam.w * 1.5)));
-    let shield = mix(vec3f(.12, .14, .18), vec3f(.30, .34, .38), B.c) * (.5 + .6 * A.h);
+    let rXZ = length(i.op.xz);
+    let coreZone = ss(3.9, 2.0, rXZ) * ss(.25, .75, abs(sin(i.op.y * .85 + g.cam.w * 1.5)));
+    let shield = mix(vec3f(.09, .11, .14), vec3f(.22, .25, .29), B.c) * (.5 + .6 * A.h);
     let eCol = select(vec3f(.15, 1.6, 2.8), vec3f(2.8, .75, .12), mat == 3 || sin(i.op.y * .4) > .2);
-    alb = mix(shield, eCol * .5, coreZone);
-    emi = eCol * coreZone * pulse * 3.8;
-    let ringHaz = ss(5.2, 6.2, length(i.op.xz)) * step(.5, fract((i.op.x + i.op.z) * 1.2));
-    alb = mix(alb, vec3f(.92, .65, .04), ringHaz * .7);
-    gloss = .85; bump = .8;
+    alb = mix(shield, eCol * .45, coreZone);
+    emi = eCol * coreZone * pulse * 3.6;
+    // Narrow caution band only on the outer face of the central equatorial ring (y near 0)
+    let ringHaz = ss(1.2, .3, abs(i.op.y)) * ss(6.6, 7.1, rXZ) * step(.5, fract((i.op.x + i.op.z) * 1.2));
+    alb = mix(alb, vec3f(.88, .62, .04), ringHaz * .85);
+    gloss = .85; bump = .75;
   } else if (mat == 4) {
     // Industrial Supply Crates, Louvered Transformers, Emitter Pads & Pipe Manifolds
     let hue = fract(sd * 7.31);
@@ -614,11 +622,11 @@ struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f };
 }
 @fragment fn fs(i: VO) -> @location(0) vec4f {
   let t = g.cam.w;
-  let crust = textureSample(tD, sR, i.wp.xz * .045 + vec2f(t * .008, t * .005));
-  let veins = textureSample(tW, sR, i.wp.xz * .06 - vec2f(t * .01, 0.)).r;
-  let hot = sat(veins * 1.6 + (1. - crust.b) * .8 - .35);
-  let col = mix(vec3f(.08, .03, .02), vec3f(2.4, .48, .05), ss(.15, .65, hot))
-          + vec3f(3.2, 1.8, .35) * ss(.65, .95, hot);
+  let crust = textureSample(tD, sR, i.wp.xz * .045 + vec2f(t * .006, t * .004));
+  let veins = textureSample(tW, sR, i.wp.xz * .055 - vec2f(t * .008, 0.)).r;
+  let hot = sat(veins * 1.45 + (1. - crust.b) * .55 - .48);
+  let col = mix(vec3f(.035, .025, .022) * (.5 + crust.b), vec3f(2.1, .38, .04), ss(.18, .62, hot))
+          + vec3f(2.8, 1.35, .22) * ss(.65, .95, hot);
   let z = zone(i.wp);
   return fin(fog(col, i.wp, z));
 }
