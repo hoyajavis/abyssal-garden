@@ -9,6 +9,12 @@ The free-floating 3D movement and voxel wall-sliding collision in the original *
 - **Live Demo:** **[https://hoyajavis.github.io/abyssal-mine/](https://hoyajavis.github.io/abyssal-mine/)**
 - **Offline:** Download [`index.html`](index.html) and open it in **Chrome** or **Edge** (requires **WebGPU**). Wait a few seconds while the mine is excavated on your GPU, then press **Launch Pyro-GX** to fly.
 
+## Screenshots
+
+![Subterranean chamber with structural support column, Class-1 Hulk Mech, patrol drones, and octagonal bulkhead portal](screenshots/chamber-hulk-mech.png)
+
+![Octagonal steel bulkhead frames leading over a basalt-crusted molten magma lake toward the Reactor Core](screenshots/octagonal-bulkheads-magma.png)
+
 ## Closed-Geometry & *Descent* Adaptations
 
 - **Inverted 3D Voxel Carving:** Instead of an open seabed with upward mesas, the compute shader (`W_DENS`) initializes the `512 × 112 × 512` voxel grid as solid rock and carves **9 octagonal chambers** connected by **16 3D tunnel segments** (including a vertical mining shaft and diagonal 6DoF bypass chutes), leaving structural shield pillars inside the vaults.
