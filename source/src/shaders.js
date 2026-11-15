@@ -363,9 +363,12 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
     let lGridZ = abs(fract(i.wp.z * .125) - .5);
     let lGridX = abs(fract(i.wp.x * .125) - .5);
     let ceilStrip = ss(-.70, -.92, n0.y) * ss(.08, .03, min(lGridX, lGridZ)) * step(.25, B.c);
-    let wallBeacon = wall * ss(.94, .98, sin(i.wp.y * .85)) * ss(.06, .02, min(lGridX, lGridZ));
+    let bCell = floor(i.wp * vec3f(.125, .25, .125));
+    let bRnd = hs(bCell.x * 13.7 + bCell.y * 7.1 + bCell.z * 31.3);
+    let wallBeacon = wall * step(.82, bRnd) * ss(.96, .99, sin(i.wp.y * .85)) * ss(.028, .008, min(lGridX, lGridZ)) * ss(.25, .55, pan);
     let lCol = mix(vec3f(1.8, 1.35, .85), vec3f(.35, 1.4, 2.2), gm.b);
-    emi += lCol * (ceilStrip * 2.6 + wallBeacon * vec3f(2.4, .35, .1) * (1.2 + .8 * sin(g.cam.w * 4. + i.wp.x * .2)));
+    let bCol = mix(vec3f(1.8, .35, .08), vec3f(.2, 1.3, 1.8), step(.92, bRnd));
+    emi += lCol * ceilStrip * 2.6 + bCol * wallBeacon * (1.0 + .6 * sin(g.cam.w * 4. + bRnd * 40.));
     // Deep magma fissure glow near bottom of East Foundry & Reactor Pit
     let fis = ss(-43., -51., i.wp.y) * ss(.52, .72, A.c);
     emi += vec3f(3.2, .65, .08) * fis * 1.8;
@@ -641,10 +644,10 @@ fn quad(i: u32) -> vec2f { return vec2f(f32(i & 1u), f32(i >> 1u)) * 2. - 1.; }
   let life = fract(t * b.y / b.z + b.x);
   let h = life * b.z;
   var p = a.xyz + vec3f(0., h, 0.);
-  let wob = b.w * (.35 + h * .04);
-  p.x += sin(t * 2.1 + b.x * 50. + h * .6) * wob;
-  p.z += cos(t * 1.7 + b.x * 33. + h * .5) * wob;
-  let sz = a.w * (.6 + .6 * (1. - life)) * ss(0., .05, life) * ss(1., .8, life);
+  let wob = b.w * .18;
+  p.x += sin(t * 3.5 + b.x * 50. + h * .4) * wob;
+  p.z += cos(t * 3.1 + b.x * 33. + h * .4) * wob;
+  let sz = a.w * (1. - life * .6) * ss(0., .06, life) * ss(1., .65, life);
   let w = p + (g.right.xyz * q.x + g.up.xyz * q.y) * sz;
   o.cp = g.vp * vec4f(w, 1.); o.uv = q; o.wp = p;
   o.pr = vec4f(b.x, sz, life, 0.);
@@ -652,14 +655,13 @@ fn quad(i: u32) -> vec2f { return vec2f(f32(i & 1u), f32(i >> 1u)) * 2. - 1.; }
 }
 @fragment fn fsBub(i: VO) -> @location(0) vec4f {
   let r = length(i.uv);
-  let disc = 1. - ss(.2, 1., r);
-  let core = 1. - ss(0., .45, r);
-  let z = zone(i.wp);
-  let col = mix(vec3f(2.4, .55, .08), vec3f(.2, 1.6, 2.8), z) + vec3f(1.5, 1.2, .6) * core;
+  let disc = 1. - ss(.15, .9, r);
+  let core = 1. - ss(0., .4, r);
+  let col = vec3f(2.6, .55, .08) + vec3f(1.8, 1.2, .4) * core;
   let v = i.wp - g.cam.xyz; let d = length(v);
   let T = exp(-SIG.g * d) * ss(1.2, 3., d);
-  let al = disc * T * .85;
-  return vec4f(min(col * al, vec3f(16.)), al);
+  let al = disc * T * (1. - i.pr.z) * .9;
+  return vec4f(min(col * al, vec3f(12.)), al);
 }
 @vertex fn vsSnow(@builtin(vertex_index) vi: u32, @location(0) a: vec4f) -> VO {
   var o: VO; let q = quad(vi); let t = g.cam.w;

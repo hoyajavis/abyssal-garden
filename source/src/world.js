@@ -303,19 +303,18 @@ function makeWorld(D, T, flyPts, POSES) {
   // Recharge Energy Pylon in the South Energy Center (6, -28, 84)
   solid(11, 6, -28, 84, 0.8, qAxis(0, 1, 0, -0.5), 2, 0.9, 1, 0.22);
 
-  // --- 7. Rising Reactor Plasma, Magma Embers & Steam Vents
+  // --- 7. Rising Molten Magma Embers (strictly over deep lava pits)
   const VENTS = [
-    [0, -46, 0], [3, -46, -3], [-3, -46, 3], [64, -52, 12], [60, -52, 8], [68, -52, 16], [58, -52, 18], [70, -52, 6],
-    [6, -44, 84], [4, -44, 80], [8, -44, 88], [-62, -42, -8], [0, -56, -88], [4, -56, -84], [-4, -56, -92],
-    [-44, -48, -64], [44, -44, -62], [-40, -44, 46], [42, -46, 54],
+    [0, -50, 0], [5, -50, -4], [-5, -50, 4],
+    [64, -50, 12], [58, -50, 8], [70, -50, 16], [60, -50, 18], [68, -50, 6],
+    [0, -50, -88], [5, -50, -84], [-5, -50, -92],
   ];
   rseed(13);
-  for (const s of spots) if (rnd() < 0.22) VENTS.push(s);
   for (const v of VENTS) {
-    const n = 75 + (rnd() * 65 | 0), y0 = v[1];
+    const n = 45 + (rnd() * 35 | 0), y0 = v[1];
     for (let i = 0; i < n; i++) {
-      const sz = rnd() < 0.28 ? rr(0.12, 0.34) : rr(0.03, 0.09);
-      bubbles.push(v[0] + rr(-0.6, 0.6), y0, v[2] + rr(-0.6, 0.6), sz, rnd(), rr(1.4, 3.2) * (0.6 + sz * 2.5), 28, rr(0.06, 0.2));
+      const sz = rr(0.025, 0.075);
+      bubbles.push(v[0] + rr(-2.2, 2.2), y0, v[2] + rr(-2.2, 2.2), sz, rnd(), rr(2.2, 4.5), 11, rr(0.04, 0.14));
     }
   }
 
