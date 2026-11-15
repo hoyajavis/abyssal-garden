@@ -1,12 +1,13 @@
 {
-  "name": "abyssal-garden",
+  "name": "abyssal-mine",
   "private": true,
-  "description": "A procedural underwater world rendered with WebGPU, bundled into one HTML file",
+  "description": "A procedural 6DoF subterranean mine rendered with WebGPU, bundled into one HTML file",
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
     "build:readable": "node build.mjs --readable",
-    "build:dev": "node build.mjs --dev"
+    "build:dev": "node build.mjs --dev",
+    "test": "node --test test.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.28.2"
