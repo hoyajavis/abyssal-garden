@@ -376,4 +376,20 @@ describe('Descent 6DoF Subterranean Mine — Traversability & Integrity Suite', 
     assert.ok(cz < -55, `Ship should slide smoothly along the tunnel (-Z), got cz=${cz.toFixed(2)}`);
     assert.ok(cx < 9.0, `Ship should be constrained by East tunnel wall, got cx=${cx.toFixed(2)}`);
   });
+
+  test("10. layout:'auto' WGSL shaders statically use all declared @binding variables", () => {
+    const autoShaders = ['W_WATER', 'W_RAYS', 'W_RBLUR', 'W_POST'];
+    for (const name of autoShaders) {
+      const m = shadersSrc.match(new RegExp(`const ${name}\\s*=([\\s\\S]*?\`;)\\n`));
+      assert.ok(m, `${name} must be defined in shaders.js`);
+      const block = m[1];
+      const bindings = [...block.matchAll(/@binding\(\d+\)\s*var(?:<[^>]+>)?\s+(\w+)\s*:/g)];
+      assert.ok(bindings.length > 0, `${name} should declare at least one binding`);
+      for (const [, varName] of bindings) {
+        // Check that varName appears at least twice (declaration + usage) in the shader block
+        const uses = block.match(new RegExp(`\\b${varName}\\b`, 'g')) || [];
+        assert.ok(uses.length >= 2, `${name} declares @binding var '${varName}' but never uses it (causes layout:'auto' mismatch)`);
+      }
+    }
+  });
 });

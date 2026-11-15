@@ -418,7 +418,8 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
   let am = (amb(i.wp, N, v1.g, z) + side(i.wp, N, sat((v2.r - .35) * 2.5), z)) * ao;
   let dl = E * ndl * (.25 + ca * .85) + hl;
   var c = alb * (dl + am) + emi + alb * flu * dot(dl + am, vec3f(.2, .4, .4));
-  let H = normalize(V + normalize(g.fwd.xyz * -.5 + vec3f(0., 1., 0.)));
+  let hv = V + normalize(g.fwd.xyz * -.5 + vec3f(0., 1., 0.));
+  let H = hv / max(length(hv), 1e-4);
   c += (E * .5 + hl * .8) * pow(sat(dot(N, H)), mix(12., 64., gloss)) * gloss * 1.4;
   c += amb(i.wp, reflect(-V, N), v1.g, z) * ao * (.12 + gloss) * .65 * pow(1. - sat(dot(N, V)), 2.5);
   return fin(fog(c, i.wp, z));
@@ -685,12 +686,10 @@ fn quad(i: u32) -> vec2f { return vec2f(f32(i & 1u), f32(i >> 1u)) * 2. - 1.; }
 const W_RAYS = S_G + W_FS + /*wgsl*/`
 @group(0) @binding(0) var<uniform> g: G;
 @group(0) @binding(1) var sR: sampler;
-@group(0) @binding(2) var sS: sampler_comparison;
-@group(0) @binding(3) var tSh: texture_depth_2d;
-@group(0) @binding(4) var tW: texture_2d<f32>;
-@group(0) @binding(5) var tDp: texture_depth${AA > 1 ? '_multisampled' : ''}_2d;
-@group(0) @binding(6) var tV: texture_3d<f32>;
-@group(0) @binding(7) var sC: sampler;
+@group(0) @binding(2) var tW: texture_2d<f32>;
+@group(0) @binding(3) var tDp: texture_depth${AA > 1 ? '_multisampled' : ''}_2d;
+@group(0) @binding(4) var tV: texture_3d<f32>;
+@group(0) @binding(5) var sC: sampler;
 @fragment fn fs(@builtin(position) fc: vec4f) -> @location(0) vec4f {
   let dp = textureLoad(tDp, vec2i(fc.xy) * 2, 0);
   let uv = fc.xy * 2. * g.res.zw;
